@@ -442,12 +442,23 @@ class _AddSemesterState extends State<AddSemester>{
           )
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: IconButton(
+        onPressed: addSemesterAndJump,
+        style: ButtonStyle(
+            backgroundColor: MaterialStateProperty.all(const Color.fromRGBO(0x20, 0x18, 0x28, 1)),
+            padding: MaterialStateProperty.all(const EdgeInsets.all(14))
+        ),
+        icon: const Icon(
+          Icons.check_rounded,
+          color: Color.fromRGBO(0xA8, 0x86, 0xDF, 1),
+        ),
+      ),
+      /*floatingActionButton: FloatingActionButton(
         onPressed: addSemesterAndJump,
         backgroundColor: const Color.fromRGBO(0x20, 0x18, 0x28, 1),
         foregroundColor: const Color.fromRGBO(0xA8, 0x86, 0xDF, 1),
         child: const Icon(Icons.check_rounded),
-      ),
+      ),*/
     );
   }
 }

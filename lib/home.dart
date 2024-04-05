@@ -1,7 +1,10 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
+import 'dart:developer';
+import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:semester_guide/add_semester.dart';
 import 'package:semester_guide/semester.dart';
 import 'package:semester_guide/semester_widget.dart';
@@ -14,13 +17,17 @@ class AppHome extends StatefulWidget{
   State<StatefulWidget> createState() => _AppHomeState();
 }
 
-class _AppHomeState extends State<AppHome>{
+class _AppHomeState extends State<AppHome> with TickerProviderStateMixin{
 
   List<Semester> semesterList = [];
   List<Widget> widgets = [];
 
   bool hadSearch = false;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  late AnimationController _animationController;
+  late Animation<double> _animationDouble;
 
   @override
   void initState() {
@@ -41,15 +48,28 @@ class _AppHomeState extends State<AppHome>{
     });
 
     _searchController.addListener(() {
+      closeMenu();
       if(_searchController.text.isEmpty && hadSearch){
         setState(() {
           fillWidgetsList(semesterList);
         });
       }
     });
+    _scrollController.addListener(() {
+      closeMenu();
+    });
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _animationDouble = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOutCubic),
+    );
   }
 
   void jumpToAddScreen(){
+    toggleMenu();
     _searchController.clear();
     Navigator.push(
       context,
@@ -107,6 +127,7 @@ class _AppHomeState extends State<AppHome>{
   Timer timer = Timer(Duration.zero, () {});
 
   bool confirmDismiss(SemesterWidget widget){
+    closeMenu();
     if(prevWidget == widget){
       AppStore.removeData(widget.semester);
       AppStore.saveData();
@@ -114,6 +135,17 @@ class _AppHomeState extends State<AppHome>{
         fillWidgetsList(semesterList);
       });
       return true;
+    }
+    if(Platform.isAndroid){
+      Fluttertoast.cancel();
+      Fluttertoast.showToast(
+        msg: 'Swipe again to delete!',
+        toastLength: Toast.LENGTH_SHORT,
+        fontSize: 14,
+        gravity: ToastGravity.SNACKBAR,
+        backgroundColor: const Color.fromRGBO(0x22, 0x22, 0x22, 1.0),
+        textColor: Colors.white,
+      );
     }
     prevWidget = widget;
     timer.cancel();
@@ -151,6 +183,75 @@ class _AppHomeState extends State<AppHome>{
     });
   }
 
+  bool _menuToggleState = false;
+  void toggleMenu(){
+    if(_menuToggleState){
+      _animationController.reverse();
+      _menuToggleState = false;
+      return;
+    }
+    _menuToggleState = true;
+    _animationController.forward();
+  }
+
+  void closeMenu(){
+    if(!_menuToggleState){
+      return;
+    }
+    toggleMenu();
+  }
+
+  void exportButton(){
+    toggleMenu();
+    AppStore.exportAsFile().then((val){
+      if(!val){
+        return;
+      }
+      if(Platform.isAndroid){
+        Fluttertoast.cancel();
+        Fluttertoast.showToast(
+          msg: 'Successfully exported data!',
+          toastLength: Toast.LENGTH_SHORT,
+          fontSize: 14,
+          gravity: ToastGravity.SNACKBAR,
+          backgroundColor: const Color.fromRGBO(0x22, 0x22, 0x22, 1.0),
+          textColor: Colors.white,
+        );
+      }
+    });
+  }
+
+  void importButton(){
+    toggleMenu();
+    AppStore.importFromFile().then((val){
+      if(!val){
+        return;
+      }
+      if(Platform.isAndroid){
+        Fluttertoast.cancel();
+        Fluttertoast.showToast(
+          msg: 'Successfully imported data!',
+          toastLength: Toast.LENGTH_SHORT,
+          fontSize: 14,
+          gravity: ToastGravity.SNACKBAR,
+          backgroundColor: const Color.fromRGBO(0x22, 0x22, 0x22, 1.0),
+          textColor: Colors.white,
+        );
+      }
+      Navigator.pop(context);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => const AppHome(),
+            barrierDismissible: false,
+            allowSnapshotting: true,
+            maintainState: true,
+            fullscreenDialog: false
+        ),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -158,6 +259,7 @@ class _AppHomeState extends State<AppHome>{
       body: Container(
         padding: MediaQuery.of(context).padding,
         child: SingleChildScrollView(
+          controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             mainAxisSize: MainAxisSize.max,
@@ -228,12 +330,82 @@ class _AppHomeState extends State<AppHome>{
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: AnimatedBuilder(
+        builder: (context, _) {
+          return Container(
+            padding: const EdgeInsets.only(left: 2, right: 2, top: 4),
+            decoration: BoxDecoration(
+              color: Color.fromRGBO(0x20, 0x18, 0x28, _animationDouble.value),
+              borderRadius: const BorderRadius.all(Radius.circular(90))
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Transform.scale(
+                  scale: _animationDouble.value,
+                  child: IconButton(
+                    onPressed: exportButton,
+                    style: ButtonStyle(
+                        padding: MaterialStateProperty.all(const EdgeInsets.all(17))
+                    ),
+                    icon: Icon(
+                      const IconData(0xf56e, fontFamily: 'Import Export'),
+                      color: Color.fromRGBO(0xA8, 0x86, 0xDF, _animationDouble.value),
+                      size: 18,
+                    ),
+                  ),
+                ),
+                Transform.scale(
+                  scale: _animationDouble.value,
+                  child: IconButton(
+                    onPressed: importButton,
+                    style: ButtonStyle(
+                        padding: MaterialStateProperty.all(const EdgeInsets.all(17))
+                    ),
+                    icon: Icon(
+                      const IconData(0xf56f, fontFamily: 'Import Export'),
+                      color: Color.fromRGBO(0xA8, 0x86, 0xDF, _animationDouble.value),
+                      size: 18,
+                    ),
+                  ),
+                ),
+                Transform.scale(
+                  scale: _animationDouble.value,
+                  child: IconButton(
+                    onPressed: jumpToAddScreen,
+                    style: ButtonStyle(
+                        padding: MaterialStateProperty.all(const EdgeInsets.all(14))
+                    ),
+                    icon: Icon(
+                      Icons.add_rounded,
+                      color: Color.fromRGBO(0xA8, 0x86, 0xDF, _animationDouble.value),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: toggleMenu,
+                  style: ButtonStyle(
+                      backgroundColor: MaterialStateProperty.all(Color.fromRGBO(lerpDouble(0x20, 0x34, _animationDouble.value)!.round(), lerpDouble(0x18, 0x25, _animationDouble.value)!.round(), lerpDouble(0x28, 0x3F, _animationDouble.value)!.round(), 1)),
+                      padding: MaterialStateProperty.all(const EdgeInsets.all(14))
+                  ),
+                  icon: AnimatedIcon(
+                    icon: AnimatedIcons.menu_arrow,
+                    color: const Color.fromRGBO(0xA8, 0x86, 0xDF, 1),
+                    progress: _animationDouble,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }, animation: _animationController,
+      ),
+      /*floatingActionButton: FloatingActionButton(
         onPressed: jumpToAddScreen,
         backgroundColor: const Color.fromRGBO(0x20, 0x18, 0x28, 1),
         foregroundColor: const Color.fromRGBO(0xA8, 0x86, 0xDF, 1),
-        child: const Icon(Icons.add),
-      ),
+        child: const Icon(Icons.menu_rounded),
+      ),*/
     );
   }
   Widget getSeparatorLine(String text){
