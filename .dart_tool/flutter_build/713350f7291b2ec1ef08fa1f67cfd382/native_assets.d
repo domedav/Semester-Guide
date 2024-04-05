@@ -1,0 +1,1 @@
+ /home/linux/AndroidStudioProjects/semester_guide/.dart_tool/flutter_build/713350f7291b2ec1ef08fa1f67cfd382/native_assets.yaml: 
