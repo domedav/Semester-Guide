@@ -86,7 +86,7 @@ class AppStore{
       allowedExtensions: ['.semesterguide'],
       bytes: utf8.encode(json)
     );
-    if(result == null){
+    if(result == null || result.isEmpty){
       return false;
     }
 
