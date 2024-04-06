@@ -6,8 +6,7 @@ Track your semesters with ease, and search for your classes to find the informat
 App was created in a day, so bugs will most likely be around
 
 ## 1.0.3
-Import/Export
-Bugfixes
+Import/Export, Bugfixes
 
 ## 1.0.2
 Initial release (yes, this wasnt on github from the getgo)
